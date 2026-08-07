@@ -5,10 +5,10 @@ alt-text sidecar that goes with it. That is the whole job.
 
 It does not host a website, does not run a build, and does not touch any other repo.
 
-Everything below was learned the expensive way on a batch of 41 pins
-(`~/source/templatesbygabi-pins/content-strategy-template/`, which is the reference for every
-format decision here). Three of the four traps each cost a failed upload. They are fixed
-constraints, not suggestions.
+Everything below was learned the expensive way on an accepted batch of 41 pins — the
+`content-strategy-template` batch, which is the reference for every format decision here.
+Three of the four traps each cost a failed upload. They are fixed constraints, not
+suggestions.
 
 ---
 
@@ -64,11 +64,12 @@ wants `Media URL`. `board` fails — it wants the literal string `Pinterest boar
 unrecognised column (`file`, `alt_text`, `pexels_id`) rejects the whole file.
 
 **2. `Media URL` must be a public link Pinterest can fetch.** It does not upload a file off the
-machine. Something has to host the images. A public GitHub repo served over
-`https://raw.githubusercontent.com/<user>/<repo>/main/<path>.png` works and is what the last
-batch used (`ivannk0900/templatesbygabi-pins`). The link only has to be alive **at publish
-time** — Pinterest copies the image onto its own CDN when the pin is created, so the hosting
-folder is disposable once the last pin in the batch has gone up.
+machine. Something has to host the images. **This repo is the host** — commit the batch folder
+to `main` and the PNGs are served over
+`https://raw.githubusercontent.com/ivannk0900/pinterest-pins/main/<batch>/<file>.png`. Push
+before running the validator; the raw URLs 404 until the commit is on `main`. The link only has
+to be alive **at publish time** — Pinterest copies the image onto its own CDN when the pin is
+created, so the folder is disposable once the last pin in the batch has gone up.
 
 **3. Duplicate `Link` — the one that cost 9 pins.** The importer permits one pin per destination
 link per file. A sheet where 7 rows point at the same post creates the first and silently rejects
@@ -117,8 +118,9 @@ Ask for these, and don't guess:
 
 1. the destination URL(s) and which pins point where
 2. the exact Pinterest board name
-3. where the images will be hosted (or whether that host still needs creating)
-4. the start date
+3. the start date
+
+Hosting is no longer a question — the images go in this repo (trap 2).
 
 Then produce the images-to-rows mapping, both CSVs, and a short pre-upload checklist. **Verify
 the checklist rather than asserting it** — `scripts/validate_batch.py` is what does the verifying.
@@ -131,9 +133,12 @@ mkdir "<batch>" && cp templates/pins.csv "<batch>/pins.csv"
 # 2. build the bulk sheets (fills set / UTM link / publish_date back into pins.csv)
 python3 scripts/build_batch.py "<batch>" \
   --board "Social media manager business" \
-  --media-base https://raw.githubusercontent.com/<user>/<repo>/main/<batch>
+  --media-base https://raw.githubusercontent.com/ivannk0900/pinterest-pins/main/<batch>
 
-# 3. verify before uploading — checks columns, row counts, link uniqueness,
+# 3. push, or every Media URL 404s
+git add "<batch>" && git commit -m "Add <batch>" && git push origin main
+
+# 4. verify before uploading — checks columns, row counts, link uniqueness,
 #    lengths, stale dates, and that every URL actually resolves
 python3 scripts/validate_batch.py "<batch>"
 ```
