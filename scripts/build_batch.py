@@ -136,20 +136,31 @@ def schedule(rows, start_date, window, per_day, seed):
     """Assign a publish_date to every row that lacks one.
 
     One pin per day by default, at a random time inside the window -- a different minute
-    per pin, never a round hour on every row. Seeded off the batch so re-runs are stable.
+    per pin, never a round hour on every row. With several a day, the window is cut into
+    that many equal slots with one pin in each, at least half a slot after the pin before
+    it, so a day's pins never bunch together. Seeded off the batch so re-runs are stable.
     """
     window_start, window_end = window
+    slot = (window_end - window_start) // per_day
     rng = random.Random(seed)
     used = set()
     unscheduled = [row for row in rows if not row.get("publish_date")]
+    previous = None
     for offset, row in enumerate(unscheduled):
         day = start_date + timedelta(days=offset // per_day)
+        slot_start = window_start + (offset % per_day) * slot
+        slot_end = window_end if per_day == 1 else slot_start + slot
+        if offset % per_day == 0:
+            previous = None
         for _ in range(500):
-            minute_of_day = rng.randrange(window_start, window_end)
+            minute_of_day = rng.randrange(slot_start, slot_end)
             stamp = (day, minute_of_day)
-            if stamp not in used:
+            if stamp not in used and (
+                previous is None or minute_of_day - previous >= slot // 2
+            ):
                 break
         used.add(stamp)
+        previous = minute_of_day
         when = datetime(
             day.year, day.month, day.day, minute_of_day // 60, minute_of_day % 60
         )
@@ -258,7 +269,12 @@ def main(argv=None):
         "--start", help="first publish date, YYYY-MM-DD UTC (default: tomorrow)"
     )
     parser.add_argument("--window", default=DEFAULT_WINDOW, help="UTC publish window")
-    parser.add_argument("--per-day", type=int, default=1, help="pins per day (default 1)")
+    parser.add_argument(
+        "--per-day",
+        type=int,
+        default=1,
+        help="pins per day, spread across the window in equal slots (default 1)",
+    )
     parser.add_argument("--max-rows", type=int, default=MAX_ROWS_PER_SHEET)
     parser.add_argument("--seed", help="scheduling seed (default: campaign + start date)")
     parser.add_argument(

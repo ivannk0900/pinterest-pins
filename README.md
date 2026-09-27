@@ -27,7 +27,8 @@ python3 scripts/validate_batch.py "my-batch"
 query string that keeps every `Link` unique, and a publish date one per day starting tomorrow at
 a random time in a 09:00–21:00 UTC window — writes them back into `pins.csv`, and emits
 `pinterest-bulk-set-<n>.csv` in Pinterest's exact column spec. It refuses to write a sheet the
-importer would reject. Re-running changes nothing.
+importer would reject. Re-running changes nothing. `--per-day N` cuts the window into N equal
+slots and puts one pin in each, so a day's pins never land minutes apart.
 
 `validate_batch.py` is the pre-upload checklist, verified rather than asserted: column names,
 row counts, link uniqueness, title and description lengths, publish dates that have gone stale,
